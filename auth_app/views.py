@@ -8,6 +8,9 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import CustomUser
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import MyTokenObtainPairSerializer
+
 # import psycopg2
 print("psycopg2 is installed!")
 
@@ -65,6 +68,29 @@ class OTPVerifyView(APIView):
 
 
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from .models import CustomUser
+from .serializers import LoginSerializer
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from .models import CustomUser
+from .serializers import LoginSerializer
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+from .models import CustomUser
+from .serializers import LoginSerializer
+
 class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -74,12 +100,19 @@ class LoginView(APIView):
             user = CustomUser.objects.filter(email=email).first()
 
             if user and user.check_password(password):
-                if not user.is_verified:  # ❌ Prevent login if user is not verified
+                if not user.is_verified:  # ❌ Prevent login if the user is not verified
                     return Response({"error": "Please verify your OTP before logging in."}, status=status.HTTP_403_FORBIDDEN)
 
+                # Generate JWT tokens
                 refresh = RefreshToken.for_user(user)
+                access = refresh.access_token
+
+                # ✅ Add role to both tokens
+                refresh["role"] = user.role
+                access["role"] = user.role  # Fix: Add role to access token
+
                 return Response({
-                    "access": str(refresh.access_token),
+                    "access": str(access),
                     "refresh": str(refresh),
                     "id": user.id,
                     "role": user.role
@@ -88,8 +121,6 @@ class LoginView(APIView):
             return Response({"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 
 class ForgotPasswordView(APIView):
     def post(self, request):
@@ -165,3 +196,9 @@ class LogoutView(APIView):
             return Response({"message": "User logged out successfully."}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": "Invalid refresh token"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer

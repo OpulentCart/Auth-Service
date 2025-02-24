@@ -159,7 +159,8 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,  # New refresh token on every refresh
     "BLACKLIST_AFTER_ROTATION": True,  # Blacklist old tokens after rotation
     "ALGORITHM": "HS256",
-    "SIGNING_KEY": config("JWT-SECRET-KEY"),  # Use env variable in production
+    "SIGNING_KEY": config("JWT_SECRET_KEY"),  # Corrected key format
+  
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 

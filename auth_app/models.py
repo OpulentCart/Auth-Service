@@ -1,17 +1,10 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from rest_framework_simplejwt.tokens import RefreshToken
+
 import random
 import datetime
 from django.utils.timezone import now
-class CustomUserManager(BaseUserManager):
-    def create_user(self, email, name, password=None, role='customer'):
-        if not email:
-            raise ValueError("Users must have an email address")
-        email = self.normalize_email(email)
-        user = self.model(email=email, name=name, role=role)
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
@@ -86,5 +79,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         self.failed_attempts = 0
         self.save()
 
+    
+
     def __str__(self):
         return self.email
+
+
