@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import CustomUser
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import CustomUser  # Adjust this based on your user model location
+from .models import CustomUser 
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -44,7 +44,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
 
-        # Add custom claims
-        token["role"] = user.role  # Assuming 'role' is a field in your User model
+       
+        token["role"] = user.role  
 
         return token

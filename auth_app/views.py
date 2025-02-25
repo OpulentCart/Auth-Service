@@ -7,27 +7,27 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import CustomUser
+from django.contrib.auth import authenticate
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import MyTokenObtainPairSerializer
 
-# import psycopg2
-print("psycopg2 is installed!")
-
+from .models import CustomUser
 from .serializers import (
     RegisterSerializer, OTPVerifySerializer, LoginSerializer, 
-    ForgotPasswordSerializer, ResetPasswordSerializer, UserProfileSerializer
+    ForgotPasswordSerializer, ResetPasswordSerializer, UserProfileSerializer, MyTokenObtainPairSerializer
 )
 
 logger = logging.getLogger(__name__)
 
+# User Registration View
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
 
     def perform_create(self, serializer):
         user = serializer.save()
-        user.is_verified = False  # ❌ Mark user as unverified until OTP is verified
+        user.is_verified = False  # Mark user as unverified until OTP verification
         user.generate_otp()
+        
+        # Send OTP email
         send_mail(
             'Your OTP Code',
             f'Your OTP code is {user.otp}',
@@ -37,8 +37,7 @@ class RegisterView(generics.CreateAPIView):
         )
         return Response({"message": "User registered successfully. OTP sent to your email."}, status=status.HTTP_201_CREATED)
 
-
-
+# OTP Verification View
 class OTPVerifyView(APIView):
     def post(self, request):
         serializer = OTPVerifySerializer(data=request.data)
@@ -53,8 +52,9 @@ class OTPVerifyView(APIView):
             if user.failed_attempts >= 3:
                 return Response({"error": "Too many failed attempts. Try again later."}, status=status.HTTP_403_FORBIDDEN)
 
-            if user.otp == otp and (now() - user.otp_created_at).seconds < 300:  # OTP valid for 5 mins
-                user.is_verified = True  # ✅ Mark user as verified
+            # Check if OTP is valid
+            if user.otp == otp and (now() - user.otp_created_at).seconds < 300:
+                user.is_verified = True  # Mark user as verified
                 user.otp = None
                 user.failed_attempts = 0
                 user.save()
@@ -66,31 +66,7 @@ class OTPVerifyView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
-from .models import CustomUser
-from .serializers import LoginSerializer
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
-from .models import CustomUser
-from .serializers import LoginSerializer
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
-from .models import CustomUser
-from .serializers import LoginSerializer
-
+# User Login View
 class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -100,16 +76,16 @@ class LoginView(APIView):
             user = CustomUser.objects.filter(email=email).first()
 
             if user and user.check_password(password):
-                if not user.is_verified:  # ❌ Prevent login if the user is not verified
+                if not user.is_verified:
                     return Response({"error": "Please verify your OTP before logging in."}, status=status.HTTP_403_FORBIDDEN)
 
                 # Generate JWT tokens
                 refresh = RefreshToken.for_user(user)
                 access = refresh.access_token
 
-                # ✅ Add role to both tokens
+                # Add user role to tokens
                 refresh["role"] = user.role
-                access["role"] = user.role  # Fix: Add role to access token
+                access["role"] = user.role
 
                 return Response({
                     "access": str(access),
@@ -122,6 +98,7 @@ class LoginView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# Forgot Password View
 class ForgotPasswordView(APIView):
     def post(self, request):
         serializer = ForgotPasswordSerializer(data=request.data)
@@ -137,6 +114,7 @@ class ForgotPasswordView(APIView):
             user.otp_created_at = now()
             user.save()
 
+            # Send password reset OTP email
             send_mail(
                 "Password Reset OTP",
                 f"Your OTP for password reset is {otp}",
@@ -144,25 +122,20 @@ class ForgotPasswordView(APIView):
                 [user.email],
                 fail_silently=False,
             )
-
             return Response({"message": "OTP sent to your email."}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+# Reset Password View
 class ResetPasswordView(APIView):
     def post(self, request):
         serializer = ResetPasswordSerializer(data=request.data)
         if serializer.is_valid():
             email = serializer.validated_data['email']
-            print('email: ', email)
             otp = serializer.validated_data['otp']
-            print('otp: ', otp)
             new_password = serializer.validated_data['new_password']
 
             user = CustomUser.objects.get(email=email)
-            print('user: ', user)
-            print("user otp", user.otp)
 
             if not user or user.otp != otp or (now() - user.otp_created_at).seconds > 300:
                 return Response({"error": "Invalid OTP or OTP expired"}, status=status.HTTP_400_BAD_REQUEST)
@@ -176,7 +149,7 @@ class ResetPasswordView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+# User Profile View
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -184,7 +157,7 @@ class UserProfileView(APIView):
         serializer = UserProfileSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
+# Logout View
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -194,11 +167,19 @@ class LogoutView(APIView):
             token = RefreshToken(refresh_token)
             token.blacklist()
             return Response({"message": "User logged out successfully."}, status=status.HTTP_200_OK)
-        except Exception as e:
+        except Exception:
             return Response({"error": "Invalid refresh token"}, status=status.HTTP_400_BAD_REQUEST)
 
-
-
-
+# Custom JWT Token View
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
+
+# Get User Details by Role
+class GetUserDetailsView(APIView):
+    def post(self, request):
+        role = request.data.get("role")
+        if not role:
+            return Response({"error": "Role is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        users = CustomUser.objects.filter(role=role).values("id", "name", "email")
+        return Response({"users": list(users)}, status=status.HTTP_200_OK)

@@ -6,11 +6,6 @@ import random
 import datetime
 from django.utils.timezone import now
 
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.db import models
-import random
-from django.utils.timezone import now
-
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, name, password, role='customer'):
         """
