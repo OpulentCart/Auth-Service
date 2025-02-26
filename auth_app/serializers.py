@@ -37,7 +37,8 @@ class ResetPasswordSerializer(serializers.Serializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['id', 'email', 'name', 'role']
+        fields = ['id', 'email', 'name', 'role', 'address', 'phone_number']
+
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod

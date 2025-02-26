@@ -201,3 +201,20 @@ class UserCountsView(APIView):
            
             "vendors": vendors
         }, status=200)
+    
+
+class UpdateUserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        user = request.user
+        data = request.data
+
+        if "address" in data:
+            user.address = data["address"]
+        if "phone_number" in data:
+            user.phone_number = data["phone_number"]
+
+        user.save()
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
