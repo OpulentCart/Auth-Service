@@ -183,3 +183,21 @@ class GetUserDetailsView(APIView):
 
         users = CustomUser.objects.filter(role=role).values("id", "name", "email")
         return Response({"users": list(users)}, status=status.HTTP_200_OK)
+    
+
+
+class UserCountsView(APIView):
+    permission_classes = [IsAuthenticated]  # Requires authentication
+
+    def get(self, request):
+        total_users = CustomUser.objects.count()
+        users = CustomUser.objects.filter(role="customer").count()
+       
+        vendors = CustomUser.objects.filter(role="vendor").count()
+
+        return Response({
+            "total_users": total_users,
+            "customer": users,
+           
+            "vendors": vendors
+        }, status=200)
