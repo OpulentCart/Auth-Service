@@ -218,3 +218,14 @@ class UpdateUserProfileView(APIView):
         user.save()
         serializer = UserProfileSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class GetAllUsersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != "admin":
+            return Response({"error": "You are not authorized to access this resource."}, status=status.HTTP_403_FORBIDDEN)
+
+        users = CustomUser.objects.all().values("id", "name", "email", "role", "address", "phone_number")
+        return Response({"users": list(users)}, status=status.HTTP_200_OK)

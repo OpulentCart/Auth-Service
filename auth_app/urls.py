@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     RegisterView, OTPVerifyView, LoginView, ForgotPasswordView, 
     ResetPasswordView, UserProfileView, LogoutView, MyTokenObtainPairView, GetUserDetailsView,UserCountsView,UpdateUserProfileView
+    ,GetAllUsersView
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -30,5 +31,6 @@ urlpatterns = [
 
     path('auth/update-profile/', UpdateUserProfileView.as_view(), name='update_profile'),
 
+    path('auth/all-users/', GetAllUsersView.as_view(), name='all_users'),
 
 ]
